@@ -1,8 +1,10 @@
 import type { PlatformSDK } from '../index.js';
-import { createNoopAiRuntime } from '../aiRuntimeNoop.js';
-import { createNoopComplianceService } from '../complianceNoop.js';
-import { createNoopMarketplaceServices } from '../marketplaceNoop.js';
-import { createNoopPackageService } from '../packageService.js';
+import {
+  createNoopAiRuntime,
+  createNoopComplianceService,
+  createNoopMarketplaceServices,
+  createNoopPackageService,
+} from '../index.js';
 
 export type MockPlatformSDKOptions = {
   tenantId?: string;

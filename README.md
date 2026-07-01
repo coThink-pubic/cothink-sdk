@@ -20,7 +20,7 @@ pnpm run test
 - `PlatformSDK` and platform service interfaces
 - Module contracts (`IApplicationModule`, `IEngineModule`, `IConnectorModule`, `IExtensionModule`)
 - AI Runtime, Marketplace, Compliance, and Package Manager interfaces
-- `@collaborative-llm-chat/platform-sdk/testing` — mocks for module authors
+- `@collaborative-llm-chat/platform-sdk/testing` — re-exports `@collaborative-llm-chat/platform-testing` (prefer the testing package for new modules)
 
 ## Documentation
 
