@@ -128,7 +128,7 @@ export interface IIdentityService {
 }
 
 export interface IAuditService {
-  /** Phase 0 contract — record audit intent; persistence may be deferred. */
+  /** Records audit intent; persisted to RuntimeAuditEvent when prisma is wired at bootstrap. */
   recordIntent(event: RuntimeAuditEventInput): Promise<void>;
 }
 
