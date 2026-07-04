@@ -7,10 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@collaborative-llm-chat/platform-testing':
-        specifier: link:../platform-testing
-        version: link:../platform-testing
     devDependencies:
       typescript:
         specifier: ^5.7.3
