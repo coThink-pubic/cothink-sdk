@@ -24,4 +24,4 @@ pnpm run test
 
 ## Documentation
 
-Normative architecture: `integration.wiki/module-architecture-specification/`
+Normative architecture: [integration.wiki/module-architecture-specification/](https://git.ncdlabs.com/coThink/integration/wiki/module-architecture-specification/README) · [integration wiki Home](https://git.ncdlabs.com/coThink/integration/wiki/Home)
