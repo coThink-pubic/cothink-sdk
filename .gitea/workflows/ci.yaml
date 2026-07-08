@@ -21,8 +21,13 @@ jobs:
           set -e
           ROOT="$(pwd)"
           PARENT="$(dirname "$ROOT")"
-          ln -sfn "$ROOT/platform-testing" "$PARENT/platform-testing"
+          # platform-testing depends on link:../cothink-sdk. Nested checkout at
+          # $ROOT/platform-testing resolves that to $ROOT/cothink-sdk, so alias
+          # the workspace there. Container runners already use .../cothink-sdk as
+          # ROOT; hostexecutor uses a random cache dir name and needs both aliases.
+          ln -sfn "$ROOT" "$ROOT/cothink-sdk"
           ln -sfn "$ROOT" "$PARENT/cothink-sdk"
+          ln -sfn "$ROOT/platform-testing" "$PARENT/platform-testing"
       - uses: https://github.com/pnpm/action-setup@v4
         with:
           version: 9.15.4
