@@ -29,7 +29,13 @@ jobs:
       - uses: https://github.com/actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Prefer action-setup pnpm over Corepack
+        run: |
+          set -e
+          corepack disable || true
+          hash -r || true
+          command -v pnpm
+          pnpm -v
+      - run: pnpm install --frozen-lockfile && pnpm run build
       - run: pnpm --dir platform-testing install --frozen-lockfile && pnpm --dir platform-testing run build
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run build
       - run: pnpm run test
