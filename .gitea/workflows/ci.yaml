@@ -21,16 +21,11 @@ jobs:
           set -e
           ROOT="$(pwd)"
           PARENT="$(dirname "$ROOT")"
-          # platform-testing depends on link:../cothink-sdk. Nested checkout at
-          # $ROOT/platform-testing resolves that to $ROOT/cothink-sdk, so alias
-          # the workspace there. Container runners already use .../cothink-sdk as
-          # ROOT; hostexecutor uses a random cache dir name and needs both aliases.
-          ln -sfn "$ROOT" "$ROOT/cothink-sdk"
-          ln -sfn "$ROOT" "$PARENT/cothink-sdk"
           ln -sfn "$ROOT/platform-testing" "$PARENT/platform-testing"
+          ln -sfn "$ROOT" "$PARENT/cothink-sdk"
       - uses: https://github.com/pnpm/action-setup@v4
         with:
-          version: 9.15.9
+          version: 9.15.4
       - uses: https://github.com/actions/setup-node@v4
         with:
           node-version: '22'
@@ -41,6 +36,11 @@ jobs:
           hash -r || true
           command -v pnpm
           pnpm -v
-      - run: pnpm install --frozen-lockfile && pnpm run build
-      - run: pnpm --dir platform-testing install --frozen-lockfile && pnpm --dir platform-testing run build
-      - run: pnpm run test
+      - name: Install and build SDK
+        run: pnpm install --frozen-lockfile && pnpm run build
+      - name: Install and build platform-testing
+        run: pnpm --dir platform-testing install --frozen-lockfile && pnpm --dir platform-testing run build
+      - name: Typecheck
+        run: pnpm run typecheck
+      - name: Test
+        run: pnpm run test
