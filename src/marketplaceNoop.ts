@@ -26,10 +26,16 @@ export function createNoopMarketplaceServices(): {
         capabilities: [],
         permissions: [],
         dependencies: [],
-        requiresAdminApproval: false,
+        requiresAdminApproval: true,
         trustStatus: 'unsigned',
+        securityAdvisories: [],
+        installBlocked: true,
+        installBlockReasons: ['Marketplace runtime unavailable'],
+        warnings: [],
       }),
-      install: noop,
+      install: async () => {
+        throw new Error('Marketplace runtime unavailable — package install blocked');
+      },
       enable: noop,
       disable: noop,
       uninstall: noop,
@@ -66,7 +72,11 @@ export function createNoopMarketplaceServices(): {
       getVersionHistory: async () => [],
     },
     trust: {
-      verifyPackage: async () => ({ ok: true, status: 'unsigned', issues: [] }),
+      verifyPackage: async () => ({
+        ok: false,
+        status: 'unsigned',
+        issues: ['Marketplace trust service unavailable'],
+      }),
       isTrustedPublisher: async () => false,
       listSecurityAdvisories: async () => [],
     },

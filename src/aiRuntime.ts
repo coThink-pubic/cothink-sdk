@@ -59,6 +59,7 @@ export type RegisteredModelProvider = {
   moduleVersion: string;
   label: string;
   providerType: string;
+  supportedCapabilities: string[];
 };
 
 export type AiContextBundle = {
@@ -89,10 +90,15 @@ export type ModelRouteRequest = {
 };
 
 export type ModelRoute = {
+  available: true;
   providerId: string;
   moduleId: string;
   modelId: string;
   providerType: string;
+} | {
+  available: false;
+  errorCode: 'NO_AUTHORIZED_MODEL_PROVIDER' | 'MODEL_CAPABILITIES_UNAVAILABLE';
+  message: string;
 };
 
 export type AiExecutionStats = {

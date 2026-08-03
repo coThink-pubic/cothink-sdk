@@ -13,10 +13,11 @@ Interface-only Platform SDK for coThink modules (`@collaborative-llm-chat/platfo
 ```bash
 pnpm install
 pnpm run build
+pnpm run typecheck
 pnpm run test
 ```
 
-Requires Node.js ≥ 22 and pnpm ≥ 9.
+Requires Node.js ≥ 22 and pnpm ≥ 9. Gitea CI (`.gitea/workflows/ci.yaml`) runs build → typecheck → Vitest on PRs to `main`. Tests cover noop fail-closed contracts (marketplace/compliance/AI) and mock permission helpers — empty suites fail CI (`vitest run` without `--passWithNoTests`).
 
 ## Exports
 

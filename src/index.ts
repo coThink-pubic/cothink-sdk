@@ -49,7 +49,8 @@ export type RuntimeAuditEventInput = {
     | 'runtime.package.upgrade'
     | 'runtime.package.remove'
     | 'runtime.package.validation_failure'
-    | 'runtime.package.dependency_failure';
+    | 'runtime.package.dependency_failure'
+    | 'marketplace.preview_install.denied';
   moduleId: string;
   moduleType: 'engine' | 'application' | 'connector' | 'package' | 'extension';
   moduleVersion?: string;
