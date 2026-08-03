@@ -58,6 +58,12 @@ export type MarketplaceInstallRequest = {
   configuration?: Record<string, unknown>;
   pinVersion?: boolean;
   autoUpdate?: boolean;
+  /** Local/dev only — never valid for public catalog visibility (ADR-0003). */
+  allowUnsignedDevInstall?: boolean;
+  /** Authorized admin override for critical advisories (ADR-0003). */
+  allowCriticalAdvisoryOverride?: boolean;
+  /** Platform bootstrap of trusted reference packages (ADR-0003). */
+  bootstrapTrustedReference?: boolean;
 };
 
 export type MarketplaceUpdateInfo = {
@@ -96,6 +102,10 @@ export type MarketplaceInstallPreview = MarketplaceCapabilityRequirement & {
   publisher: string;
   requiresAdminApproval: boolean;
   trustStatus: string;
+  securityAdvisories: string[];
+  installBlocked: boolean;
+  installBlockReasons: string[];
+  warnings: string[];
 };
 
 export type MarketplaceRecommendation = {

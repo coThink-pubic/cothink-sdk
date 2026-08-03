@@ -16,6 +16,10 @@ export type PackageInstallParams = {
   packageId: string;
   version: string;
   configuration?: Record<string, unknown>;
+  /** Local/dev only — never valid for public/enterprise visibility (ADR-0003). */
+  allowUnsignedDevInstall?: boolean;
+  /** Authorized admin override for critical advisories (ADR-0003). */
+  allowCriticalAdvisoryOverride?: boolean;
 };
 
 export type PackageTenantParams = {
