@@ -41,10 +41,8 @@ describe('createNoopAiRuntime', () => {
     const ai = createNoopAiRuntime();
     expect(ai.getHealth()).toBe('unknown');
     await expect(ai.routeModel(ctx, {})).resolves.toMatchObject({
-      providerId: 'disabled',
-      moduleId: 'platform-ai-foundation',
-      modelId: 'default',
-      providerType: 'router',
+      available: false,
+      errorCode: 'NO_AUTHORIZED_MODEL_PROVIDER',
     });
   });
 });

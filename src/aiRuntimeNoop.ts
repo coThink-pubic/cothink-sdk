@@ -39,10 +39,9 @@ export function createNoopAiRuntime(): IAiRuntime {
     },
     async routeModel() {
       return {
-        providerId: 'disabled',
-        moduleId: 'platform-ai-foundation',
-        modelId: 'default',
-        providerType: 'router',
+        available: false,
+        errorCode: 'NO_AUTHORIZED_MODEL_PROVIDER',
+        message: 'AI runtime disabled',
       };
     },
     getExecutionStats() {
