@@ -1,3 +1,28 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json"
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "rangeStrategy": "bump",
+  "constraints": {
+    "pnpm": "9.15.4"
+  },
+  "postUpdateOptions": [
+    "pnpmDedupe"
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "before 4am on monday"
+    ]
+  },
+  "packageRules": [
+    {
+      "description": "Pin CI-managed packageManager field with lockfile updates",
+      "matchDepNames": [
+        "pnpm"
+      ],
+      "rangeStrategy": "pin"
+    }
+  ]
 }
