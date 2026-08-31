@@ -26,17 +26,22 @@ jobs:
       GITEA_REPOSITORY_OWNER: ${{ gitea.repository_owner }}
       COTHINK_PLATFORM_OWNER: coThink
     steps:
-      - name: Checkout cothink-sdk
-        uses: https://github.com/actions/checkout@v4
-        with:
-          path: cothink-sdk
-      - name: Checkout integration
-        uses: https://github.com/actions/checkout@v4
-        with:
-          repository: coThink/integration
-          ref: main
-          path: integration
-          token: ${{ secrets.ORG_CLONE_PAT }}
+      - name: Checkout pipeline repositories
+        run: |
+          set -euo pipefail
+          export HOME="${HOME:-${GITHUB_WORKSPACE:-${PWD}}/.ci-home}"
+          workspace="${GITHUB_WORKSPACE:-$PWD}"
+          token="${ORG_CLONE_PAT:?ORG_CLONE_PAT required}"
+          owner="${GITEA_REPOSITORY_OWNER:-coThink}"
+          host="${GITEA_HOST:-git.ncdlabs.com}"
+          int_dest="${workspace}/integration"
+          if [ ! -f "${int_dest}/scripts/ci-checkout-pipeline-runner-repos.sh" ]; then
+            git clone --depth 1 --branch main \
+              "https://oauth2:${token}@${host}/${owner}/integration.git" \
+              "$int_dest"
+          fi
+          bash "${int_dest}/scripts/ci-checkout-pipeline-runner-repos.sh" "$workspace"
+
       - name: Prepare cothink-ci kubeconfig
         run: bash integration/scripts/ci-prepare-cothink-ci-kubeconfig.sh
       - name: Rebuild api/worker via parallel k3s Jobs
