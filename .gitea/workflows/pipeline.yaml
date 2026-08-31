@@ -1,0 +1,59 @@
+# Rebuild the service images that compile cothink-sdk when main changes.
+# The shared integration builder resolves all other inputs at exact main SHAs
+# and publishes deterministic composite build-input tags.
+name: Pipeline
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: cothink-pipeline-cothink-sdk
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Rebuild api/worker containers
+    runs-on: k3s-linux
+    timeout-minutes: 180
+    env:
+      IMAGE_PREFIX: git.ncdlabs.com/cothink/cothink
+      REGISTRY_USERNAME: ${{ secrets.COTHINK_PACKAGE_REGISTRY_USERNAME }}
+      REGISTRY_TOKEN: ${{ secrets.COTHINK_PACKAGE_REGISTRY_TOKEN }}
+      ORG_CLONE_PAT: ${{ secrets.ORG_CLONE_PAT }}
+      COTHINK_CI_KUBECONFIG: ${{ secrets.COTHINK_CI_KUBECONFIG }}
+      GITEA_REPOSITORY_OWNER: ${{ gitea.repository_owner }}
+      COTHINK_PLATFORM_OWNER: coThink
+    steps:
+      - name: Checkout cothink-sdk
+        uses: https://github.com/actions/checkout@v4
+        with:
+          path: cothink-sdk
+      - name: Checkout integration
+        uses: https://github.com/actions/checkout@v4
+        with:
+          repository: coThink/integration
+          ref: main
+          path: integration
+          token: ${{ secrets.ORG_CLONE_PAT }}
+      - name: Prepare cothink-ci kubeconfig
+        run: bash integration/scripts/ci-prepare-cothink-ci-kubeconfig.sh
+      - name: Rebuild api/worker via parallel k3s Jobs
+        run: |
+          set -euo pipefail
+          export HOME="${HOME:-${GITHUB_WORKSPACE:-${PWD}}/.ci-home}"
+          bash integration/scripts/build-service-container-k8s.sh \
+            --services api,worker \
+            --workspace-root "$GITHUB_WORKSPACE" \
+            --image-prefix "$IMAGE_PREFIX" \
+            --parallel true \
+            --fail-fast true
+      - name: Deploy newly published images to production
+        env:
+          COTHINK_GITEA_TOKEN: ${{ secrets.COTHINK_GITEA_TOKEN }}
+          COTHINK_AUTO_DEPLOY: ${{ secrets.COTHINK_AUTO_DEPLOY }}
+        run: |
+          set -euo pipefail
+          export GITEA_TOKEN="${COTHINK_GITEA_TOKEN:-${ORG_CLONE_PAT:-}}"
+          bash integration/scripts/dispatch-auto-production-deploy.sh --services api,worker
