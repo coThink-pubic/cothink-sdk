@@ -6,6 +6,10 @@ name: Pipeline
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'renovate.json'
+      - '.gitignore'
   workflow_dispatch:
 
 concurrency:
@@ -48,12 +52,11 @@ jobs:
         run: |
           set -euo pipefail
           export HOME="${HOME:-${GITHUB_WORKSPACE:-${PWD}}/.ci-home}"
-          bash integration/scripts/build-service-container-k8s.sh \
+          bash integration/scripts/ensure-service-images.sh \
             --services api,worker \
             --workspace-root "$GITHUB_WORKSPACE" \
             --image-prefix "$IMAGE_PREFIX" \
-            --parallel true \
-            --fail-fast true
+            --max-parallel 2
       - name: Deploy newly published images to production
         env:
           COTHINK_GITEA_TOKEN: ${{ secrets.COTHINK_GITEA_TOKEN }}
