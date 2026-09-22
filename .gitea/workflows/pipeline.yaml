@@ -56,7 +56,7 @@ jobs:
             --services api,worker \
             --workspace-root "$GITHUB_WORKSPACE" \
             --image-prefix "$IMAGE_PREFIX" \
-            --max-parallel 2
+            --max-parallel 3
       - name: Deploy newly published images to production
         env:
           COTHINK_GITEA_TOKEN: ${{ secrets.COTHINK_GITEA_TOKEN }}
