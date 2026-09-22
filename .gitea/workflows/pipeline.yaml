@@ -1,0 +1,67 @@
+# Rebuild the service images that compile cothink-sdk when main changes.
+# The shared integration builder resolves all other inputs at exact main SHAs
+# and publishes deterministic composite build-input tags.
+name: Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'renovate.json'
+      - '.gitignore'
+  workflow_dispatch:
+
+concurrency:
+  group: cothink-pipeline-cothink-sdk
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Rebuild api/worker containers
+    runs-on: k3s-linux
+    timeout-minutes: 180
+    env:
+      IMAGE_PREFIX: git.ncdlabs.com/cothink/cothink
+      REGISTRY_USERNAME: ${{ secrets.COTHINK_PACKAGE_REGISTRY_USERNAME }}
+      REGISTRY_TOKEN: ${{ secrets.COTHINK_PACKAGE_REGISTRY_TOKEN }}
+      ORG_CLONE_PAT: ${{ secrets.ORG_CLONE_PAT }}
+      COTHINK_CI_KUBECONFIG: ${{ secrets.COTHINK_CI_KUBECONFIG }}
+      GITEA_REPOSITORY_OWNER: ${{ gitea.repository_owner }}
+      COTHINK_PLATFORM_OWNER: coThink
+    steps:
+      - name: Checkout pipeline repositories
+        run: |
+          set -euo pipefail
+          export HOME="${HOME:-${GITHUB_WORKSPACE:-${PWD}}/.ci-home}"
+          workspace="${GITHUB_WORKSPACE:-$PWD}"
+          token="${ORG_CLONE_PAT:?ORG_CLONE_PAT required}"
+          owner="${GITEA_REPOSITORY_OWNER:-coThink}"
+          host="${GITEA_HOST:-git.ncdlabs.com}"
+          int_dest="${workspace}/integration"
+          if [ ! -f "${int_dest}/scripts/ci-checkout-pipeline-runner-repos.sh" ]; then
+            git clone --depth 1 --branch main \
+              "https://oauth2:${token}@${host}/${owner}/integration.git" \
+              "$int_dest"
+          fi
+          bash "${int_dest}/scripts/ci-checkout-pipeline-runner-repos.sh" "$workspace"
+
+      - name: Prepare cothink-ci kubeconfig
+        run: bash integration/scripts/ci-prepare-cothink-ci-kubeconfig.sh
+      - name: Rebuild api/worker via parallel k3s Jobs
+        run: |
+          set -euo pipefail
+          export HOME="${HOME:-${GITHUB_WORKSPACE:-${PWD}}/.ci-home}"
+          bash integration/scripts/ensure-service-images.sh \
+            --services api,worker \
+            --workspace-root "$GITHUB_WORKSPACE" \
+            --image-prefix "$IMAGE_PREFIX" \
+            --max-parallel 3
+      - name: Deploy newly published images to production
+        env:
+          COTHINK_GITEA_TOKEN: ${{ secrets.COTHINK_GITEA_TOKEN }}
+          COTHINK_AUTO_DEPLOY: ${{ secrets.COTHINK_AUTO_DEPLOY }}
+        run: |
+          set -euo pipefail
+          export GITEA_TOKEN="${COTHINK_GITEA_TOKEN:-${ORG_CLONE_PAT:-}}"
+          bash integration/scripts/dispatch-auto-production-deploy.sh --services api,worker
