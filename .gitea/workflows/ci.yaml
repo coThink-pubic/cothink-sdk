@@ -7,7 +7,7 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: campusrose-macos
     steps:
       - uses: https://github.com/actions/checkout@v4.2.2
       - name: Clone sibling repos
