@@ -7,9 +7,61 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: k3s-linux
     steps:
+      - name: Touch k3s host flock
+        run: touch /tmp/cothink-k3s-ci.lock
       - uses: https://github.com/actions/checkout@v4.2.2
+      - name: Symlink sibling paths
+        run: |
+          set -e
+          ROOT="$(pwd)"
+          PARENT="$(dirname "$ROOT")"
+          ln -sfn "$ROOT/platform-testing" "$PARENT/platform-testing"
+          ln -sfn "$ROOT" "$PARENT/cothink-sdk"
+
+      - name: Install Node 22 (musl-aware for k3s hostexecutor)
+        run: |
+          set -euo pipefail
+          ver="22.14.0"
+          arch="$(uname -m)"
+          case "$arch" in
+            x86_64) node_arch=x64 ;;
+            aarch64|arm64) node_arch=arm64 ;;
+            *) echo "unsupported arch: $arch"; exit 1 ;;
+          esac
+          if [ -f /etc/alpine-release ] || (ldd /bin/sh 2>&1 | grep -qi musl); then
+            url="https://unofficial-builds.nodejs.org/download/release/v${ver}/node-v${ver}-linux-${node_arch}-musl.tar.gz"
+            prefix="$HOME/.local/node-v${ver}-linux-${node_arch}-musl"
+          else
+            url="https://nodejs.org/dist/v${ver}/node-v${ver}-linux-${node_arch}.tar.gz"
+            prefix="$HOME/.local/node-v${ver}-linux-${node_arch}"
+          fi
+          mkdir -p "$HOME/.local"
+          if [ ! -x "$prefix/bin/node" ]; then
+            tmp="$(mktemp -d)"
+            curl -fsSL "$url" -o "$tmp/node.tar.gz"
+            tar -xzf "$tmp/node.tar.gz" -C "$HOME/.local"
+            rm -rf "$tmp"
+          fi
+          echo "$prefix/bin" >> "$GITHUB_PATH"
+          export PATH="$prefix/bin:$PATH"
+          node -v
+
+      - name: Disable Corepack so local pnpm is used
+        run: |
+          if command -v corepack >/dev/null 2>&1; then corepack disable; fi
+      - name: Install pnpm matching packageManager
+        run: |
+          set -euo pipefail
+          pm="$(node -p "require('./package.json').packageManager || ''" 2>/dev/null || true)"
+          case "$pm" in
+            pnpm@*) ver="${pm#pnpm@}" ;;
+            *) ver="9.15.4" ;;
+          esac
+          npm i -g "pnpm@${ver}"
+          pnpm -v
+
       - name: Clone sibling repos
         env:
           TOKEN: ${{ secrets.ORG_CLONE_PAT }}
@@ -27,23 +79,10 @@ jobs:
             git clone --depth 1 "https://oauth2:${TOKEN}@git.ncdlabs.com/coThink/${name}.git" "$ROOT/$name"
             ln -sfn "$ROOT/$name" "$PARENT/$name"
           }
-          for name in platform-testing; do
+          for name in shared; do
             clone_sib "$name"
           done
           ln -sfn "$ROOT" "$PARENT/cothink-sdk"
-      - uses: https://github.com/pnpm/action-setup@v4
-        with:
-          version: 9.15.9
-      - uses: https://github.com/actions/setup-node@v4.3.0
-        with:
-          node-version: '22'
-      - name: Prefer action-setup pnpm over Corepack
-        run: |
-          set -e
-          corepack disable || true
-          hash -r || true
-          command -v pnpm
-          pnpm -v
       - name: Install and build SDK
         run: pnpm install --frozen-lockfile && pnpm run build
       - name: Install and build platform-testing
