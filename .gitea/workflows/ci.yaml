@@ -12,12 +12,6 @@ jobs:
       - name: Touch k3s host flock
         run: touch /tmp/cothink-k3s-ci.lock
       - uses: https://github.com/actions/checkout@v4.2.2
-      - uses: https://github.com/actions/checkout@v4.2.2
-        with:
-          repository: coThink/platform-testing
-          ref: main
-          path: platform-testing
-          token: ${{ secrets.ORG_CLONE_PAT || secrets.COTHINK_GITEA_TOKEN || github.token }}
       - name: Symlink sibling paths
         run: |
           set -e
@@ -67,6 +61,28 @@ jobs:
           esac
           npm i -g "pnpm@${ver}"
           pnpm -v
+
+      - name: Clone sibling repos
+        env:
+          TOKEN: ${{ secrets.ORG_CLONE_PAT }}
+        run: |
+          set -euo pipefail
+          ROOT="$(pwd)"
+          PARENT="$(dirname "$ROOT")"
+          if [ -z "${TOKEN:-}" ]; then
+            echo "ORG_CLONE_PAT secret is empty" >&2
+            exit 1
+          fi
+          clone_sib() {
+            local name="$1"
+            rm -rf "$ROOT/$name"
+            git clone --depth 1 "https://oauth2:${TOKEN}@git.ncdlabs.com/coThink/${name}.git" "$ROOT/$name"
+            ln -sfn "$ROOT/$name" "$PARENT/$name"
+          }
+          for name in shared; do
+            clone_sib "$name"
+          done
+          ln -sfn "$ROOT" "$PARENT/cothink-sdk"
       - name: Install and build SDK
         run: pnpm install --frozen-lockfile && pnpm run build
       - name: Install and build platform-testing
