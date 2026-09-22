@@ -7,7 +7,7 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: campusrose-macos
     steps:
       - uses: https://github.com/actions/checkout@v4.2.2
       - name: Clone sibling repos
@@ -17,6 +17,10 @@ jobs:
           set -euo pipefail
           ROOT="$(pwd)"
           PARENT="$(dirname "$ROOT")"
+          if [ -z "${TOKEN:-}" ]; then
+            echo "ORG_CLONE_PAT secret is empty" >&2
+            exit 1
+          fi
           clone_sib() {
             local name="$1"
             rm -rf "$ROOT/$name"
