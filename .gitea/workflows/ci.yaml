@@ -100,7 +100,11 @@ jobs:
             pnpm config set engine-strict false || true
             pnpm install --frozen-lockfile
             pnpm run build
+            test -f dist/index.d.ts
             pnpm --dir platform-testing install --frozen-lockfile
+            mkdir -p platform-testing/node_modules/@collaborative-llm-chat
+            ln -sfn "$(pwd)" platform-testing/node_modules/@collaborative-llm-chat/platform-sdk
+            test -f platform-testing/node_modules/@collaborative-llm-chat/platform-sdk/dist/index.d.ts
             pnpm --dir platform-testing run build
             pnpm run typecheck
             pnpm run test
