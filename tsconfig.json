@@ -17,15 +17,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "forceConsistentCasingInFileNames": true,
-    "paths": {
-      "@collaborative-llm-chat/platform-sdk": [
-        "./src/index.ts"
-      ],
-      "@collaborative-llm-chat/platform-sdk/*": [
-        "./src/*"
-      ]
-    }
+    "forceConsistentCasingInFileNames": true
   },
   "include": [
     "src/**/*.ts"
