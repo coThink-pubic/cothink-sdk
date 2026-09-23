@@ -11,6 +11,55 @@ jobs:
     steps:
       - uses: https://github.com/actions/checkout@v4.2.2
 
+      - name: Install Node 22 (musl-aware for k3s hostexecutor)
+        run: |
+          set -euo pipefail
+          ver="22.23.2"
+          arch="$(uname -m)"
+          case "$arch" in
+            x86_64) node_arch=x64 ;;
+            aarch64|arm64) node_arch=arm64 ;;
+            *) echo "unsupported arch: $arch"; exit 1 ;;
+          esac
+          if [ -f /etc/alpine-release ] || (ldd /bin/sh 2>&1 | grep -qi musl); then
+            url="https://unofficial-builds.nodejs.org/download/release/v${ver}/node-v${ver}-linux-${node_arch}-musl.tar.gz"
+            prefix="$HOME/.local/node-v${ver}-linux-${node_arch}-musl"
+          else
+            url="https://nodejs.org/dist/v${ver}/node-v${ver}-linux-${node_arch}.tar.gz"
+            prefix="$HOME/.local/node-v${ver}-linux-${node_arch}"
+          fi
+          mkdir -p "$HOME/.local"
+          if [ ! -x "$prefix/bin/node" ]; then
+            tmp="$(mktemp -d)"
+            curl -fsSL "$url" -o "$tmp/node.tar.gz"
+            tar -xzf "$tmp/node.tar.gz" -C "$HOME/.local"
+            rm -rf "$tmp"
+          fi
+          echo "$prefix/bin" >> "$GITHUB_PATH"
+          export PATH="$prefix/bin:$PATH"
+          node -v
+
+      - name: Disable Corepack so local pnpm is used
+        run: |
+          if command -v corepack >/dev/null 2>&1; then corepack disable; fi
+      - name: Install pnpm matching packageManager into PATH prefix
+        run: |
+          set -euo pipefail
+          pm="$(node -p "require('./package.json').packageManager || ''" 2>/dev/null || true)"
+          case "$pm" in
+            pnpm@*) ver="${pm#pnpm@}" ;;
+            *) ver="9.15.4" ;;
+          esac
+          prefix="${RUNNER_TEMP:-/tmp}/pnpm-prefix-${GITHUB_RUN_ID:-$$}"
+          mkdir -p "$prefix"
+          npm install --prefix "$prefix" "pnpm@${ver}"
+          echo "$prefix/node_modules/.bin" >> "$GITHUB_PATH"
+          echo "$(dirname "$(command -v node)")" >> "$GITHUB_PATH"
+          export PATH="$prefix/node_modules/.bin:$(dirname "$(command -v node)"):$PATH"
+          hash -r || true
+          command -v pnpm
+          pnpm -v
+
       - name: Clone sibling repos
         env:
           TOKEN: ${{ secrets.ORG_CLONE_PAT }}
@@ -32,76 +81,18 @@ jobs:
             clone_sib "$name"
           done
           ln -sfn "$ROOT" "$PARENT/cothink-sdk"
-
-      - name: Install Node 22 + pnpm (musl-aware, flock, standalone pnpm)
-        run: |
-          set -euo pipefail
-          ver="22.14.0"
-          arch="$(uname -m)"
-          case "$arch" in
-            x86_64) node_arch=x64; pnpm_arch=x64 ;;
-            aarch64|arm64) node_arch=arm64; pnpm_arch=arm64 ;;
-            *) echo "unsupported arch: $arch"; exit 1 ;;
-          esac
-          if [ -f /etc/alpine-release ] || (ldd /bin/sh 2>&1 | grep -qi musl); then
-            url="https://unofficial-builds.nodejs.org/download/release/v${ver}/node-v${ver}-linux-${node_arch}-musl.tar.gz"
-            prefix="$HOME/.local/node-v${ver}-linux-${node_arch}-musl"
-          else
-            url="https://nodejs.org/dist/v${ver}/node-v${ver}-linux-${node_arch}.tar.gz"
-            prefix="$HOME/.local/node-v${ver}-linux-${node_arch}"
-          fi
-          pnpm_ver="9.15.4"
-          if [ -f package.json ]; then
-            extracted="$(sed -n 's/.*"packageManager": "pnpm@\([^"]*\)".*/\1/p' package.json | head -1)"
-            if [ -n "$extracted" ]; then pnpm_ver="$extracted"; fi
-          fi
-          mkdir -p "$HOME/.local" "$prefix/bin" /tmp
-          touch /tmp/cothink-k3s-ci.lock
-          # Serialize node+pnpm install so concurrent k3s jobs cannot corrupt shared ~/.local
-          flock /tmp/cothink-k3s-ci.lock sh -c 'set -euo pipefail
-            prefix="'"$prefix"'"
-            url="'"$url"'"
-            pnpm_ver="'"$pnpm_ver"'"
-            pnpm_arch="'"$pnpm_arch"'"
-            if [ ! -x "$prefix/bin/node" ]; then
-              tmp="$(mktemp -d)"
-              curl -fsSL "$url" -o "$tmp/node.tar.gz"
-              tar -xzf "$tmp/node.tar.gz" -C "$HOME/.local"
-              rm -rf "$tmp"
-            fi
-            export PATH="$prefix/bin:$PATH"
-            if command -v corepack >/dev/null 2>&1; then corepack disable || true; fi
-            curl -fsSL "https://github.com/pnpm/pnpm/releases/download/v${pnpm_ver}/pnpm-linuxstatic-${pnpm_arch}" -o "$prefix/bin/pnpm"
-            chmod +x "$prefix/bin/pnpm"
-            command -v node
-            command -v pnpm
-            node -v
-            pnpm -v
-            test -x "$(command -v pnpm)"
-          '
-          echo "$prefix/bin" >> "$GITHUB_PATH"
-          export PATH="$prefix/bin:$PATH"
-          command -v pnpm
-          pnpm -v
-      - name: Add CI swap for heavy installs
-        run: |
-          set -euo pipefail
-          if [ ! -f /swapfile ]; then
-            sudo fallocate -l 4G /swapfile 2>/dev/null || sudo dd if=/dev/zero of=/swapfile bs=1M count=4096 status=none || true
-            if [ -f /swapfile ]; then
-              sudo chmod 600 /swapfile || true
-              sudo mkswap /swapfile || true
-            fi
-          fi
-          sudo swapon /swapfile 2>/dev/null || true
-          free -h || true
       - name: Build and test (host flock)
         run: |
           set -euo pipefail
           lock=/tmp/cothink-k3s-ci.lock
           flock "$lock" env PATH="$PATH" bash -c '
             set -euo pipefail
+            export PATH="$PATH"
+            hash -r || true
+            command -v node
             command -v pnpm
+            node -v
+            pnpm -v
             export npm_config_engine_strict=false
             pnpm config set engine-strict false || true
             pnpm install --frozen-lockfile
