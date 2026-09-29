@@ -1,4 +1,4 @@
-import type { IAiRuntime } from '@collaborative-llm-chat/platform-sdk';
+import type { IAiRuntime } from './aiRuntime.js';
 
 export function createNoopAiRuntime(): IAiRuntime {
   const emptyStats = {
